@@ -1,66 +1,45 @@
+cmake_minimum_required(VERSION 3.0.0)
 
-if(CMAKE_TOOLCHAIN_FILE)
-set(LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to")
-# get absolute path, but get_filename_component ABSOLUTE only refer with source dir, so find_file here :(
-get_filename_component(CMAKE_TOOLCHAIN_FILE_NAME ${CMAKE_TOOLCHAIN_FILE} NAME)
-find_file(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE_NAME} PATHS ${CMAKE_SOURCE_DIR} NO_DEFAULT_PATH)
-message(STATUS "CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
-endif()
+include(cmake/hunter.cmake) # huntergate
 
-if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-endif()
-message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
-
-project(ncnn)
-
-cmake_minimum_required(VERSION 2.8.10)
-
-# set(CMAKE_BUILD_TYPE debug)
-# set(CMAKE_BUILD_TYPE relwithdebinfo)
-set(CMAKE_BUILD_TYPE release)
+project(ncnn VERSION 2018.03.14)
 
 option(NCNN_OPENMP "openmp support" ON)
 option(NCNN_STDIO "load model from external file" ON)
 option(NCNN_STRING "plain and verbose string" ON)
 option(NCNN_OPENCV "minimal opencv structure emulation" OFF)
 option(NCNN_BENCHMARK "print benchmark information for every layer" OFF)
+option(NCNN_BUILD_EXAMPLES "build ncnn examples" OFF)
+option(NCNN_BUILD_BENCHMARK "build the benchmarks" OFF)
+option(NCNN_BUILD_TOOLS "build ncnn tools" OFF)
+option(NCNN_LOCAL_TOOLCHAIN "use internal default compiler flags" ON)
 
 if(NCNN_OPENMP)
-    find_package(OpenMP)
-    if(OpenMP_CXX_FOUND OR OPENMP_FOUND)
+    find_package(OpenMP) # >= 3.0 for 'collapse'
+    if((OpenMP_CXX_FOUND OR OPENMP_FOUND) AND OpenMP_CXX_VERSION_MAJOR GREATER_EQUAL 3.0)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     endif()
 endif()
 
-add_definitions(-Wall -Wextra -Wno-unused-function)
-
-add_definitions(-fPIC)
-add_definitions(-Ofast)
-
-add_definitions(-ffast-math)
-# add_definitions(-march=native)
-
-# add_definitions(-flto)
-
-add_definitions(-fvisibility=hidden -fvisibility-inlines-hidden)
-
-if(ANDROID)
-    # disable shared library on android
-    set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
-elseif(IOS)
-    # disable shared library on xcode ios
-    set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
+if(NCNN_LOCAL_TOOLCHAIN)
+  include(cmake/toolchain.cmake)
 endif()
 
-##############################################
+set(NCNN_TOP_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
-# add_subdirectory(examples)
-# add_subdirectory(benchmark)
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+
 add_subdirectory(src)
-if(NOT ANDROID AND NOT IOS)
-add_subdirectory(tools)
+
+if(NCNN_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
+if(NCNN_BUILD_BENCHMARK)
+  add_subdirectory(benchmark)
+endif()
+
+if(NCNN_BUILD_TOOLS AND NOT ANDROID AND NOT IOS)
+  add_subdirectory(tools)
 endif()
