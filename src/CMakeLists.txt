@@ -145,6 +145,14 @@ target_include_directories(ncnn
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/layer>"
 )
 
+if(NCNN_OPENMP)
+    find_package(OpenMP) # >= 3.0 for 'collapse'
+    if((OpenMP_CXX_FOUND OR OPENMP_FOUND) AND OpenMP_CXX_VERSION_MAJOR GREATER_EQUAL 3.0)
+        target_compile_options(ncnn PUBLIC ${OpenMP_CXX_FLAGS})
+        target_link_libraries(ncnn PUBLIC ${OpenMP_CXX_FLAGS})
+    endif()
+endif()
+
 # Installation (https://github.com/forexample/package-example) {
 
 # Layout. This works for all platforms:

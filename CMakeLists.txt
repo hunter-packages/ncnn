@@ -14,14 +14,6 @@ option(NCNN_BUILD_BENCHMARK "build the benchmarks" OFF)
 option(NCNN_BUILD_TOOLS "build ncnn tools" OFF)
 option(NCNN_LOCAL_TOOLCHAIN "use internal default compiler flags" ON)
 
-if(NCNN_OPENMP)
-    find_package(OpenMP) # >= 3.0 for 'collapse'
-    if((OpenMP_CXX_FOUND OR OPENMP_FOUND) AND OpenMP_CXX_VERSION_MAJOR GREATER_EQUAL 3.0)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    endif()
-endif()
-
 if(NCNN_LOCAL_TOOLCHAIN)
   include(cmake/toolchain.cmake)
 endif()
