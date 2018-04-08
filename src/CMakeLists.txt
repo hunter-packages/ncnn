@@ -1,12 +1,6 @@
-
 ##############################################
 
 configure_file(platform.h.in ${CMAKE_CURRENT_BINARY_DIR}/platform.h)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/layer)
-
 set(ncnn_SRCS
     blob.cpp
     cpu.cpp
@@ -143,9 +137,64 @@ ncnn_add_layer(DeconvolutionDepthWise)
 ncnn_add_layer(ShuffleChannel)
 ncnn_add_layer(InstanceNorm)
 
-add_library(ncnn STATIC ${ncnn_SRCS})
+add_library(ncnn ${ncnn_SRCS})
+target_include_directories(ncnn 
+  PUBLIC # these will be propagated to dependencies
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/layer>"
+)
 
-install(TARGETS ncnn ARCHIVE DESTINATION lib)
+# Installation (https://github.com/forexample/package-example) {
+
+# Layout. This works for all platforms:
+#   * <prefix>/lib/cmake/<PROJECT-NAME>
+#   * <prefix>/lib/
+#   * <prefix>/include/
+set(config_install_dir "lib/cmake/${PROJECT_NAME}")
+set(include_install_dir "include")
+
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+# Configuration
+set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+set(namespace "${PROJECT_NAME}::")
+
+# Include module with fuction 'write_basic_package_version_file'
+include(CMakePackageConfigHelpers)
+
+# Configure '<PROJECT-NAME>ConfigVersion.cmake'
+# Use:
+#   * PROJECT_VERSION
+write_basic_package_version_file(
+    "${version_config}" COMPATIBILITY SameMajorVersion
+)
+
+# Configure '<PROJECT-NAME>Config.cmake'
+# Use variables:
+#   * TARGETS_EXPORT_NAME
+#   * PROJECT_NAME
+configure_package_config_file(
+    "${NCNN_TOP_DIR}/cmake/Config.cmake.in"
+    "${project_config}"
+    INSTALL_DESTINATION "${config_install_dir}"
+)
+
+# Targets:
+#   * header location after install: <prefix>/include/ncnn/ncnn.hpp
+#   * headers can be included by C++ code `#include <ncnn/ncnn.hpp>`
+install(
+    TARGETS ncnn
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    LIBRARY DESTINATION "lib"
+    ARCHIVE DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
+    INCLUDES DESTINATION "${include_install_dir}"
+)
+
+# Headers:
+#   * include/ncnn/ncnn.hpp -> <prefix>/include/ncnn/ncnn.hpp
 install(FILES
     blob.h
     cpu.h
@@ -159,5 +208,23 @@ install(FILES
     benchmark.h
     ${CMAKE_CURRENT_BINARY_DIR}/layer_type_enum.h
     ${CMAKE_CURRENT_BINARY_DIR}/platform.h
-    DESTINATION include
+    DESTINATION "${include_install_dir}"
 )
+
+# Config
+#   * <prefix>/lib/cmake/ncnn/ncnnConfig.cmake
+#   * <prefix>/lib/cmake/ncnn/ncnnConfigVersion.cmake
+install(
+    FILES "${project_config}" "${version_config}"
+    DESTINATION "${config_install_dir}"
+)
+
+# Config
+#   * <prefix>/lib/cmake/ncnn/ncnnTargets.cmake
+install(
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    NAMESPACE "${namespace}"
+    DESTINATION "${config_install_dir}"
+)
+
+# }
