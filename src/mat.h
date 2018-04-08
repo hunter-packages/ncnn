@@ -396,8 +396,9 @@ inline Mat Mat::clone() const
         m.create(w, h, elemsize);
     else if (dims == 3)
         m.create(w, h, c, elemsize);
+    else return Mat(); // empty() == unsupported
 
-    if (total() > 0)
+    if (total() > 0 && data && m.data) // null checks for static analyzer
     {
         memcpy(m.data, data, total() * elemsize);
     }
